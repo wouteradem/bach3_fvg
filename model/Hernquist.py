@@ -36,11 +36,11 @@ class Hernquist(IModel):
 
     def first_derivative_gravitation_potential(self):
         """Sets first derivative of gravitational potential"""
-        return -1 * (self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor)**2
+        return -1 * (self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor) ** 2
 
     def second_derivative_gravitation_potential(self):
         """Sets second derivative of gravitational potential"""
-        return 2 * (self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor)**3
+        return 2 * (self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor) ** 3
 
     def mass_within_radius(self):
         """Sets mass within radius"""
