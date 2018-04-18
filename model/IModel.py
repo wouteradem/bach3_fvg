@@ -19,3 +19,6 @@ class IModel(object):
 
     @abstractmethod
     def mass_within_radius(self): pass
+
+    @abstractmethod
+    def mass_within_half_radius(self): pass

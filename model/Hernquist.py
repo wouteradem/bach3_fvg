@@ -1,6 +1,6 @@
 import numpy as np
 from math import sqrt
-from entities.IModel import IModel
+from model.IModel import IModel
 
 
 class Hernquist(IModel):
@@ -32,19 +32,20 @@ class Hernquist(IModel):
 
     def gravitational_potential(self):
         """Sets gravitational potential"""
-        return -(self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor)
+        return (self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor)
 
     def first_derivative_gravitation_potential(self):
         """Sets first derivative of gravitational potential"""
-        pass
+        return -1 * (self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor)**2
 
     def second_derivative_gravitation_potential(self):
         """Sets second derivative of gravitational potential"""
-        pass
+        return 2 * (self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor)**3
 
     def mass_within_radius(self):
         """Sets mass within radius"""
         return (self.__mass * self.__radius ** 2) / (self.__radius + self.__scale_factor) ** 2
 
-    # TODO Extend this a bit.
-    def __str__(self): pass
+    def mass_within_half_radius(self):
+        """Sets mass within half radius"""
+        return (self.__mass * self.__half_radius ** 2) / (self.__half_radius + self.__scale_factor) ** 2
