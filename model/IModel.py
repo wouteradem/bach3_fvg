@@ -6,19 +6,19 @@ class IModel(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def density_profile(self): pass
+    def density_profile(self, radius): pass
 
     @abstractmethod
-    def gravitational_potential(self): pass
+    def binding_potential(self, radius): pass
 
     @abstractmethod
-    def first_derivative_gravitation_potential(self): pass
+    def first_derivative_binding_potential(self, radius): pass
 
     @abstractmethod
-    def second_derivative_gravitation_potential(self): pass
+    def second_derivative_binding_potential(self, radius): pass
 
     @abstractmethod
-    def mass_within_radius(self): pass
+    def mass_within_radius(self, radius): pass
 
     @abstractmethod
-    def mass_within_half_radius(self): pass
+    def half_radius(self, radius): pass

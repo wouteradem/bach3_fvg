@@ -1,20 +1,13 @@
 import numpy as np
-from math import sqrt
 from model.IModel import IModel
 
 
 class Hernquist(IModel):
     GRAVITATIONAL_CONSTANT = 1
 
-    def __init__(self, radius, mass=1, scale_factor=1):
-        self.__radius = radius
+    def __init__(self, mass=1., scale_factor=1.):
         self.__mass = mass
         self.__scale_factor = scale_factor
-        self.__half_radius = self.__scale_factor + sqrt(self.__radius)
-
-    @property
-    def radius(self):
-        return self.__radius
 
     @property
     def mass(self):
@@ -24,28 +17,28 @@ class Hernquist(IModel):
     def scale_factor(self):
         return self.__scale_factor
 
-    def density_profile(self):
-        """Sets density profile"""
+    def density_profile(self, radius):
+        """Sets density profile."""
         nominator = self.GRAVITATIONAL_CONSTANT * self.__scale_factor
-        denominator = np.pi * self.__radius * (self.__radius + self.__scale_factor) ** 3
+        denominator = 2.0 * np.pi * radius * np.power(radius + self.__scale_factor, 3)
         return nominator / denominator
 
-    def gravitational_potential(self):
-        """Sets gravitational potential"""
-        return (self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor)
+    def binding_potential(self, radius):
+        """Sets binding potential."""
+        return (self.GRAVITATIONAL_CONSTANT * self.__mass) / (radius + self.__scale_factor)
 
-    def first_derivative_gravitation_potential(self):
-        """Sets first derivative of gravitational potential"""
-        return -1 * (self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor) ** 2
+    def first_derivative_binding_potential(self, radius):
+        """Sets first derivative of binding potential."""
+        return -1.0 * (self.GRAVITATIONAL_CONSTANT * self.__mass) / np.power(radius + self.__scale_factor, 2)
 
-    def second_derivative_gravitation_potential(self):
-        """Sets second derivative of gravitational potential"""
-        return 2 * (self.GRAVITATIONAL_CONSTANT * self.__mass) / (self.__radius + self.__scale_factor) ** 3
+    def second_derivative_binding_potential(self, radius):
+        """Sets second derivative of binding potential."""
+        return 2.0 * (self.GRAVITATIONAL_CONSTANT * self.__mass) / np.power(radius + self.__scale_factor, 3)
 
-    def mass_within_radius(self):
-        """Sets mass within radius"""
-        return (self.__mass * self.__radius ** 2) / (self.__radius + self.__scale_factor) ** 2
+    def mass_within_radius(self, radius):
+        """Sets mass within radius."""
+        return (self.__mass * np.power(radius, 2)) / np.power(radius + self.__scale_factor, 2)
 
-    def mass_within_half_radius(self):
-        """Sets mass within half radius"""
-        return (self.__mass * self.__half_radius ** 2) / (self.__half_radius + self.__scale_factor) ** 2
+    def half_radius(self, radius):
+        """Sets the half radius."""
+        return self.__scale_factor + np.sqrt(radius)
