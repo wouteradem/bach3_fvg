@@ -1,6 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from scipy.integrate import quad
+from scipy.interpolate import UnivariateSpline
 from service.Transform import Transform
 
 
@@ -45,7 +47,7 @@ class Orbit:
         if momentum == 0.0:
             return self.__model.binding_potential(r)
         else:
-            return self.__model.binding_potential(r) - np.power(momentum, 2) / (2 * np.power(r, 2))
+            return self.__model.binding_potential(r) - np.power(momentum, 2) / (2.0 * np.power(r, 2))
 
     def get_momentum_from_energy(self, r, energy):
         """Sets the momentum from the energy."""
@@ -81,12 +83,12 @@ class Orbit:
             return 0.0
         elif self.__r_peri < self.__r_apo:
             # (radial velocity != 0.0, angular velocity != 0.0).
-            nominator = 1. / (self.__r_apo + 1) - 1. / (self.__r_peri + 1)
-            denominator = 1. / (2 * np.power(self.__r_apo, 2)) - 1. / (2 * np.power(self.__r_peri, 2))
+            nominator = 1.0 / (self.__r_apo + 1) - 1.0 / (self.__r_peri + 1)
+            denominator = 1.0 / (2 * np.power(self.__r_apo, 2)) - 1. / (2 * np.power(self.__r_peri, 2))
             return np.sqrt(nominator/denominator)
         elif self.__r_peri == self.__r_apo:
             # (radial velocity = 0.0, angular velocity != 0.0).
-            return np.power(self.__r_apo, 3) * self.__model.first_derivative_binding_potential(self.__r_apo)
+            return np.sqrt(-1 * np.power(self.__r_apo, 3) * self.__model.first_derivative_binding_potential(self.__r_apo))
 
     def set_radial_period(self):
         """Sets the radial period."""
@@ -99,21 +101,21 @@ class Orbit:
     def solution_orbit(self):
         """Sets the orbit using odeint."""
         if self.__r_apo == 0.0 and self.__r_peri == 0.0:
-            return [0.0, 0.0]
-        time_down = np.linspace(0, self.__radial_period/2., 41)
+            return [0.0, 0.0, 0.0]
+        time_down = np.linspace(0, self.__radial_period / 2.0, 41)
         if self.__momentum == 0.0:
-            state = [self.__r_apo]
-        else:
             state = [self.__r_apo, 0.0]
+        else:
+            state = [self.__r_apo, 0.0, 0.0]
         orbit_down = odeint(self.__transform_service.motion_ode, state, time_down,
                             args=(self.__energy, self.__momentum, 1))
         if self.__momentum == 0.0:
             orbit_down = np.insert(orbit_down, 1, 0.0, axis=1)
-        time_up = np.linspace(self.__radial_period / 2., self.__radial_period, 41)
+        time_up = np.linspace(self.__radial_period / 2.0, self.__radial_period, 41)
         if self.__momentum == 0.0:
-            state = [0.0]
+            state = [0.0, -orbit_down[-1][2]]
         else:
-            state = [self.__r_peri, 2.13172983154]  # Must be last value of orbit_down.
+            state = [self.__r_peri, orbit_down[-1][1], 0.0]
         orbit_up = odeint(self.__transform_service.motion_ode, state, time_up,
                           args=(self.__energy, self.__momentum, -1))
         if self.__momentum == 0.0:
@@ -125,8 +127,39 @@ class Orbit:
 
     def interpolation(self):
         """Interpolates the (E,L) couples on circular orbits."""
-        radii = np.linspace(0., self.MAX_RADIUS, 1000)
+        radii = np.linspace(1, self.MAX_RADIUS, 1000)
+        energy = np.empty(1000)
+        momentum = np.empty(1000)
         for r in range(len(radii)):
-            self.__r_peri = r
-            self.__r_apo = r
-        return "OK"
+            radius = r / 100.0
+            self.__r_peri = radius
+            self.__r_apo = radius
+            momentum[r] = self.set_momentum()
+            self.__momentum = momentum[r]
+            energy[r] = self.set_binding_energy()
+            self.__energy = energy[r]
+        spl = UnivariateSpline(momentum, energy, s=0.1)
+        plt.plot(radii, spl(radii), 'b', lw=3)
+        plt.show()
+        return
+
+    def mass_increment(self):
+        """Sets the mass increments."""
+
+        # Sets the formatting.
+        np.set_printoptions(suppress=True)
+
+        radii = np.linspace(1, self.MAX_RADIUS, 1000)
+        mass = np.empty(1000)
+        for r in range(len(radii)):
+            radius = r / 100.0
+            mass[r] = self.__model.mass_within_radius(radius)
+        i = 1
+        mass_increment = np.empty(999)
+        while i < len(mass):
+            mass_increment[i-1] = mass[i] - mass[i-1]
+            i = i + 1
+        return mass_increment
+
+    def radial_distribution(self):
+        pass

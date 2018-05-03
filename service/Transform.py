@@ -23,10 +23,12 @@ class Transform:
         t2 = energy
         if momentum == 0.0:
             radix = t1 - t2
+            dvr_dt = self.__model.first_derivative_binding_potential(r)
         else:
             t3 = np.power(momentum, 2) / (2 * np.power(r, 2))
             radix = t1 - t2 - t3
             dphi_dt = momentum / np.power(r, 2)
+            dvr_dt = self.__model.first_derivative_binding_potential(r) + np.power(momentum, 2) / np.power(r, 3)
         if direction > 0.0:
             if radix > 0.0:
                 dr_dt = -1.0 * np.sqrt(2 * radix)
@@ -38,6 +40,6 @@ class Transform:
             else:
                 dr_dt = 0.0
         if momentum == 0.0:
-            return [dr_dt]
+            return [dr_dt, dvr_dt]
         else:
-            return [dr_dt, dphi_dt]
+            return [dr_dt, dphi_dt, dvr_dt]
