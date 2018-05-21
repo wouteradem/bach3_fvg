@@ -1,26 +1,25 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from scipy.integrate import quad
-from scipy.interpolate import UnivariateSpline
+from scipy.optimize import leastsq
 from service.Transform import Transform
 
 
 class Orbit:
-    MAX_RADIUS = 100
+    MAX_RADIUS = 10
 
     def __init__(self, state, model):
-        if state[0] > state[1]:
-            self.__r_peri = state[1]
-            self.__r_apo = state[0]
-        else:
-            self.__r_peri = state[0]
-            self.__r_apo = state[1]
+        self.__r_peri = np.round(state[0], 2)
+        self.__r_apo = np.round(state[1], 2)
         self.__model = model
         self.__transform_service = Transform(model)
         self.__momentum = self.set_momentum()
         self.__energy = self.set_binding_energy()
-        self.__radial_period = self.set_radial_period()
+        if self.__r_peri != self.__r_apo:
+            self.__radial_period = self.set_radial_period()
+        else:
+            self.__radial_period = 0.
+        self.__orbit = None
 
     @property
     def radius_peri(self):
@@ -54,22 +53,27 @@ class Orbit:
         momentum = np.sqrt(2 * np.power(r, 2) * (self.__model.binding_potential(r) - energy))
         return momentum
 
-    def get_radii(self):
+    @staticmethod
+    def get_radii(energy, momentum):
         """Determines the peri and apo centre and filters out negative values."""
         c1 = 1.0
-        c2 = 1.0 - 1.0 / self.__energy
-        c3 = np.power(self.__momentum, 2) / (2.0 * self.__energy)
-        c4 = np.power(self.__momentum, 2) / (2.0 * self.__energy)
+        c2 = 1.0 - 1.0 / energy
+        c3 = np.power(momentum, 2) / (2.0 * energy)
+        c4 = np.power(momentum, 2) / (2.0 * energy)
         coefficients = [c1, c2, c3, c4]
         roots = np.roots(coefficients)
-        return np.sort(roots[roots >= 0.0])
+        roots = np.sort(roots[roots >= 0.0])
+        if len(roots) == 3:
+            roots = np.delete(roots, 0)
+        if isinstance(roots[0], complex) and isinstance(roots[1], complex):
+            roots[0] = np.real(0.)
+            roots[1] = np.real(0.)
+        return roots
 
     def get_apocentre_from_pericentre(self, r_apo):
-        """TODO Is this needed?"""
         pass
 
     def get_pericentre_from_apocentre(self, r_peri):
-        """TODO Is this needed?"""
         pass
 
     def set_binding_energy(self):
@@ -78,7 +82,7 @@ class Orbit:
 
     def set_momentum(self):
         """Sets the momentum of the orbit."""
-        if self.__r_peri == 0.0 and self.__r_apo == 0.0:
+        if self.__r_peri == 0.0 or self.__r_apo == 0.0:
             # (radial velocity = 0.0, angular velocity = 0.0).
             return 0.0
         elif self.__r_peri < self.__r_apo:
@@ -101,7 +105,7 @@ class Orbit:
     def solution_orbit(self):
         """Sets the orbit using odeint."""
         if self.__r_apo == 0.0 and self.__r_peri == 0.0:
-            return [0.0, 0.0, 0.0]
+            return [[0.0, 0.0, 0.0, 0.0]]
         time_down = np.linspace(0, self.__radial_period / 2.0, 41)
         if self.__momentum == 0.0:
             state = [self.__r_apo, 0.0]
@@ -122,44 +126,43 @@ class Orbit:
             orbit_up = np.insert(orbit_up, 1, np.pi, axis=1)
         orbit = np.concatenate((orbit_down, orbit_up), axis=0)
         times = np.concatenate((time_down, time_up), axis=0)
-        orbit = np.insert(orbit, 0, times, axis=1)
-        return orbit
+        self.__orbit = np.insert(orbit, 0, times, axis=1)
+        return self.__orbit
 
-    def interpolation(self):
-        """Interpolates the (E,L) couples on circular orbits."""
-        radii = np.linspace(1, self.MAX_RADIUS, 1000)
-        energy = np.empty(1000)
-        momentum = np.empty(1000)
-        for r in range(len(radii)):
-            radius = r / 100.0
-            self.__r_peri = radius
-            self.__r_apo = radius
-            momentum[r] = self.set_momentum()
-            self.__momentum = momentum[r]
-            energy[r] = self.set_binding_energy()
-            self.__energy = energy[r]
-        spl = UnivariateSpline(momentum, energy, s=0.1)
-        plt.plot(radii, spl(radii), 'b', lw=3)
-        plt.show()
-        return
+    @staticmethod
+    def get_time_in_orbit(orbit, r_1, r_2):
+        """Gets the time in orbit."""
+        if orbit is not None:
+            orbit_dub = []
+            for i in range(0, len(orbit)/2):
+                if r_1 <= orbit[i][1] and r_1 <= orbit[i][1] <= r_2:
+                    orbit_dub.append(orbit[i][0])
 
-    def mass_increment(self):
+        # Now calculate the time delta's.
+        time = 0.
+        for t in range(1, len(orbit_dub)):
+            delta = orbit_dub[t] - orbit_dub[t-1]
+            time += delta
+        return time
+
+    @staticmethod
+    def mass_increment(r_1, r_2, model):
         """Sets the mass increments."""
+        return model.mass_within_radius(r_2) - model.mass_within_radius(r_1)
 
-        # Sets the formatting.
-        np.set_printoptions(suppress=True)
+    def residual(self, mass_guess, masses, weight):
+        """ Sets the fit."""
+        model = mass_guess * weight
+        return masses - model
 
-        radii = np.linspace(1, self.MAX_RADIUS, 1000)
-        mass = np.empty(1000)
-        for r in range(len(radii)):
-            radius = r / 100.0
-            mass[r] = self.__model.mass_within_radius(radius)
-        i = 1
-        mass_increment = np.empty(999)
-        while i < len(mass):
-            mass_increment[i-1] = mass[i] - mass[i-1]
-            i = i + 1
-        return mass_increment
-
-    def radial_distribution(self):
-        pass
+    def mass_fit(self):
+        """ Makes an estimation of the masses to fit the Hernquist model."""
+        # TODO Using the calculated data from the test file for now.
+        hernquist_masses = np.array([0.47532888391651557, 0.19081514722535292, 0.09009822394024258,
+                                    0.05175695973895911, 0.03366687792495937, 0.02363632669717164,
+                                    0.017571159870201525, 0.013465512077184605, 0.010690387067462614])
+        weights = np.array([0.7975, 0.285, 0.1825, 0.0025, 0.0025, 0.0125, 0.01, 0.0125, 0.0125])
+        guess_of_mk = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+        final_mk, success = leastsq(self.residual, guess_of_mk[:], args=(hernquist_masses, weights))
+        if success:
+            return final_mk

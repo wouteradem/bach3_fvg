@@ -39,6 +39,6 @@ class Hernquist(IModel):
         """Sets mass within radius."""
         return (self.__mass * np.power(radius, 2)) / np.power(radius + self.__scale_factor, 2)
 
-    def half_radius(self, radius):
+    def half_radius(self):
         """Sets the half radius."""
-        return self.__scale_factor + np.sqrt(radius)
+        return self.__scale_factor + np.sqrt(2)
