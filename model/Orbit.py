@@ -166,3 +166,12 @@ class Orbit:
         final_mk, success = leastsq(self.residual, guess_of_mk[:], args=(hernquist_masses, weights))
         if success:
             return final_mk
+
+    @staticmethod
+    def get_fitted_mass_model(mk):
+        """ Sets the fitted mass against the calculated weigths."""
+        weights = np.array([0.7975, 0.285, 0.1825, 0.0025, 0.0025, 0.0125, 0.01, 0.0125, 0.0125])
+        fitted_mass_model = []
+        for i in range(len(mk)):
+            fitted_mass_model.append(mk[i] * weights[i])
+        return fitted_mass_model

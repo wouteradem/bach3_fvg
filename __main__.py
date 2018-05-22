@@ -83,16 +83,14 @@ if __name__ == '__main__':
 
         # Step 6.
         mass_fit = orbit.mass_fit()
+        fitted_mass_model = Orbit.get_fitted_mass_model(mass_fit)
 
         # Step 7.
         # Plot fitted mass versus Hernquist mass.
         # Fit dimension.
         energies = energies[:-1]
-        energy_mass_distro = []
-        for e in range(len(energies)):
-            energy_mass_distro.append(energies[e] * mass_fit[e])
-        plt.scatter(energy_mass_distro, mass_increments)
-        plt.xlabel("Fitted mass")
+        plt.scatter(fitted_mass_model, mass_increments)
+        plt.xlabel("Total star mass")
         plt.ylabel("Hernquist mass")
         plt.show()
 
